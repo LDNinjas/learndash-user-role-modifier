@@ -80,48 +80,53 @@ class LearnDash_User_Role_Modifier {
      * Plugin Hooks
      */
     public function hooks() {
-        add_filter( 'learndash_settings_fields', [ $this, 'lurm_add_metabox_in_group_setting' ] ,30,2 );
-        add_action( 'save_post', [ $this, 'lurm_save_custom_user_role_data' ], 30, 3 );
         add_action( 'ld_added_group_access', [ $this, 'lurm_update_user_role' ], 10, 2 );
+        add_filter( 'learndash_header_tab_menu', [ $this, 'lurm_add_custom_tabs' ], 10, 3 );
+        add_action( 'add_meta_boxes', [ $this, 'lurm_add_metabox' ], 10, 2 );
+        add_action( 'admin_enqueue_scripts', [ $this, 'lurm_enqueue_scripts' ] );
+        add_action( 'wp_ajax_create_user_role', [ $this, 'lurm_create_user_role' ] );
+        add_action( 'wp_ajax_delete_user_role', [ $this, 'lurm_delete_user_role' ] );
     }
 
     /**
-     * update user role
+     * delete role
      */
-    public function lurm_update_user_role( $user_id, $group_id ) {
+    public function lurm_delete_user_role() {
 
-        $updated_data = get_post_meta( $group_id, 'lurm_custom_settings', true );
-        $upated_role = isset( $updated_data['user_role'] ) ? $updated_data['user_role'] : '';
-        $user = get_userdata( $user_id );
+        $role_name = isset( $_POST['role_name'] ) ? $_POST['role_name'] : '';
 
-        $is_option_enabled = isset( $updated_data['option'] ) ? $updated_data['option'] : '';
+        if( $role_name ) {
 
-        if ( $user && ! empty( $upated_role ) && array_key_exists( $upated_role, wp_roles()->roles ) && 'on' == $is_option_enabled ) {
-
-            $user->add_role( $upated_role );
-        }
-    }
-
-    /**
-     * save custom role data
-     */
-    public function lurm_save_custom_user_role_data( $post_id = 0, $post = null, $update = false ) {
-
-        if ( isset( $_POST['learndash-group-access-settings']['lurm_user_role_option_enabled'] ) ) {
-
-            $custom_user_role_option = isset( $_POST['learndash-group-access-settings']['lurm_user_role_option_enabled'] ) ? esc_attr( $_POST['learndash-group-access-settings']['lurm_user_role_option_enabled'] ) : '';
-
-            $custom_user_role = isset( $_POST['learndash-group-access-settings']['lurm_user_role_custom'] ) ? esc_attr( $_POST['learndash-group-access-settings']['lurm_user_role_custom'] ) : '';
-            $role_name = ucwords( $custom_user_role );
-            $custom_user_role = str_replace( ' ', '_', $custom_user_role );
+            $custom_user_role = str_replace( ' ', '_', $role_name );
             $custom_user_role = strtolower( $custom_user_role );
+            remove_role( $custom_user_role );
+        }
 
-            if( 'on' == $custom_user_role_option && $custom_user_role ) {
+        wp_die();
+    }
 
-                $data = [];
-                $data['option'] = $custom_user_role_option;
-                $data['user_role'] = $custom_user_role;
-                update_post_meta( $post_id, 'lurm_custom_settings', $data );
+    /**
+     * create user role
+     */
+    public function lurm_create_user_role() {
+
+        $role_name = isset( $_POST['role_name'] ) ? $_POST['role_name'] : '';
+        $is_checked = isset( $_POST['is_checked'] ) ? $_POST['is_checked'] : '';
+        $selected_option = isset( $_POST['selected_option'] ) ? $_POST['selected_option'] : '';
+        $group_id = isset( $_POST['group_id'] ) ? intval( $_POST['group_id'] ) : 0;
+
+        if( ! $group_id ) {
+            wp_die();
+        }
+
+        if( 'true' == $is_checked ) {
+
+            $role_name = ucwords( $role_name );
+            
+            $custom_user_role = str_replace( ' ', '_', $role_name );
+            $custom_user_role = strtolower( $custom_user_role );
+            
+            if( 'Any Other' == $selected_option ) {
 
                 add_role( $custom_user_role, $role_name, array(
                     'view_ticket' => true,
@@ -137,95 +142,196 @@ class LearnDash_User_Role_Modifier {
                     'read' => true,
                     'propanel_widgets' => false,
                 ) );
-            }
-        } else {
 
-            $updated_data = get_post_meta( $post_id, 'lurm_custom_settings', true );
-            $updated_role = isset( $updated_data['user_role'] ) ? $updated_data['user_role'] : '';
+                $custom_role = get_option( 'lurm-role-name' );
+                
+                if( ! $custom_role ) {
+                    $custom_role = [];    
+                }
+
+                $custom_role[$custom_user_role] = $role_name;
+                update_option( 'lurm-role-name', $custom_role );
+                
+            } else {
+                $role_name = $selected_option;
+            }
+
             $data = [];
-            $data['option'] = 'off';
-            $data['user_role'] = $updated_role;
-            update_post_meta( $post_id, 'lurm_custom_settings', $data );
+            $data['option'] = $is_checked;
+            $data['user_role'] = $role_name;
+            update_post_meta( $group_id, 'lurm_custom_settings', $data );
         }
+
+        wp_die();
     }
 
     /**
-     * group setting
+     * enqueue scripts
      */
-    public function lurm_add_metabox_in_group_setting( $setting_option_fields = array(), $settings_metabox_key = '' ) {
+    public function lurm_enqueue_scripts() {
 
-        if( 'learndash-group-access-settings' == $settings_metabox_key ) {
+        $rand = rand( 1, 99999999999 );
+
+        wp_enqueue_style( 'lurm-frontend-css', LURM_ASSETS_URL . 'css/lurm-frontend.css', [], $rand, null );
+        wp_enqueue_script( 'lurm-backend-js', LURM_ASSETS_URL . 'js/lurm-backend.js', [ 'jquery' ], $rand, true );
+        wp_localize_script( 'lurm-backend-js', 'LURM', [
+            'ajaxURL'       => admin_url( 'admin-ajax.php' ),
+            'baseURL'       => get_permalink(),
+        ] );
+    }
+
+    /**
+     * add metabox
+     */
+    public function lurm_add_metabox( $post_type, $post ) {
+
+        add_meta_box(
+
+            'lurm-user-role-id',
+            'Custom User Role Content',
+            [ $this, 'lurm_metabox_content' ],
+            $post_type,
+            'advanced',
+            'high'
+        );
+    }
+
+    /**
+     * metabox callback
+     */
+    public function lurm_metabox_content() {
+        
+        global $wp_roles;
+        $roles = $wp_roles->roles;
+        $role_names = array_column( $roles, 'name' );
+        
+        $group_id = get_the_ID();
+        $get_updated_data = get_post_meta( $group_id, 'lurm_custom_settings', true );
+
+        $option_is_enabled = isset( $get_updated_data['option'] ) ? $get_updated_data['option'] : '';
+
+        $custom_role = get_option( 'lurm-role-name' );
+
+        $selected_role = __( 'Select a role', LURM_TEXT_DOMAIN );
+        $lurm_checked = '';
+        $display = '';
+
+        if( 'true' == $option_is_enabled ) {
             
-            $post_id = get_the_ID();
-            $custom_settings = get_post_meta( $post_id, 'lurm_custom_settings', true );
+            $selected_role = isset( $get_updated_data['user_role'] ) ? $get_updated_data['user_role'] : '';
 
-            $lurm_custom_option = isset( $custom_settings['option'] ) ? $custom_settings['option'] : '';
-            
-            $lurm_custom_role = isset( $custom_settings['user_role'] ) ? $custom_settings['user_role'] : '';
-            
-            $lurm_custom_role = str_replace( '_', ' ', $lurm_custom_role );
-            $lurm_custom_role = ucwords( $lurm_custom_role );
-
-            $open = false;
-            $child_state = 'closed';
-
-            if( 'on' == $lurm_custom_option ) {
-                $open = true;
-                $child_state = 'open';
+            if( ! in_array( $selected_role, $role_names ) ) {
+                $selected_role = __( 'Select a role', LURM_TEXT_DOMAIN );
             }
+            
+            $lurm_checked = 'checked';
+            $display = 'block';
+        }
+        ?>
+        <div class="lurm-main-wrapper">
+            <div class="lurm-inner-wrapper">
+                <label class="switch">
+                  <input type="checkbox" class="lurm-checkbox" <?php echo $lurm_checked; ?>>
+                  <span class="slider round"></span>
+                </label>
+            </div>
+            <div class="lurm-role-dropdown-wrapper" style="display: <?php echo $display; ?>;"> 
+                <div class="lurm-role-dropdown-header">
+                    <div class="lurm-select-text-wrap"><?php echo $selected_role; ?></div>
+                    <div class="dashicons dashicons-arrow-down-alt2 lurm-role-down-arrow"></div>        
+                </div>
+                <div class="lurm-group-dropdown-content">
+                    <div class="lurm-inner-wrap">
+                        <?php 
+                        if( ! empty( $role_names ) && is_array( $role_names ) ) {
+                            ?>
+                            <div class="lurm-select-role-text lurm-role-option">
+                                <?php echo __( 'Any Other', LURM_TEXT_DOMAIN ); ?>
+                            </div>
+                            <?php
+                            foreach( $role_names as $role_name ) {
 
-            $setting_option_fields['lurm_user_role_option_enabled'] = array(
-                'name'                => 'lurm_user_role_option_enabled',
-                'label'               => 'User Role Option',
-                'type'                => 'checkbox-switch',
-                'value'               => $open,
-                'default'             => '',
-                'options'             => array(
-                    ''       => 'Allow different user role to students',
-                    // 'CUSTOM' => '',
-                ),
-                'help_text'           => 'Allow different user role to students.',
-                'child_section_state' => $child_state,
-                'rest'                => array(
-                    'show_in_rest' => true,
-                    'rest_args' => array(
-                        'schema' => array(
-                            'field_key'   => 'custom_user_role',
-                            'description' => 'Custom User Role',
-                            'type'        => 'string',
-                            'default'     => '',
-                        ),
-                    ),
-                ),
-            );
+                                if( 'Administrator' == $role_name ) {
+                                    continue;
+                                }
 
-            $setting_option_fields['lurm_user_role_custom'] = array(
-                'name'                => 'lurm_user_role_custom',
-                'label'               => 'Custom User Role',
-                'type'                => 'text',
-                'value'               => $lurm_custom_role,
-                'default'             => '',
-                'attrs'               => array(
-                    'step' => 1,
-                    'min'  => 0,
-                ),
-                'class'               => 'small-text',
-                'parent_setting'      => 'lurm_user_role_option_enabled',
-                'rest'                => array(
-                    'show_in_rest' => true,
-                    'rest_args' => array(
-                        'schema' => array(
-                            'field_key'   => 'courses_per_page_custom',
-                            'description' => 'Custom User Role',
-                            'type'        => 'string',
-                            'default'     => '',
-                        ),
-                    ),
-                ),
-            );
+                                $role_key = str_replace( ' ', '_', $role_name );
+                                $role_key = strtolower( $role_key );
+
+                                if( is_array( $custom_role ) && in_array( $role_name, $custom_role ) ) {
+                                    ?>
+                                    <div class="lurm-child-wrapper">
+                                        <div class="lurm-role-option" style="width: 85%;" data-role_key="<?php echo $role_key; ?>"><?php echo $role_name ; ?></div>
+                                        <div class="lurm-trash dashicons dashicons-trash"></div>
+                                    </div>                                
+                                    <?php
+                                } else {
+                                    ?>
+                                    <div class="lurm-child-wrapper">
+                                        <div class="lurm-role-option" style="width: 100%;" data-role_key="<?php echo $role_key; ?>"><?php echo $role_name ; ?></div>
+                                    </div>
+                                    <?php
+                                }           
+                            }
+                        }
+                        ?>
+                    </div>
+                </div>
+            </div>
+            <div class="lurm-role-text-field">
+                <p><input type="text" placeholder="<?php echo __( 'Enter role name', LURM_TEXT_DOMAIN ); ?>"></p>
+                <button data_group-id="<?php echo $group_id; ?>"><?php echo __( 'Create Role', LURM_TEXT_DOMAIN ); ?></button>
+            </div>
+        </div>
+        <?php
+    } 
+
+    /**
+     * added new tab
+     */
+    public function lurm_add_custom_tabs( $header_tabs_data, $menu_tab_key, $screen_post_type ) {
+
+        $screen = get_current_screen();
+        
+        if( $screen && 'post' != $screen->base ) {
+            return $header_tabs_data;
         }
 
-        return $setting_option_fields;
+        if( $screen_post_type && 'groups' == $screen_post_type ) {
+
+            $header_tabs_data[] = [
+                'id'        => 'lurm_tab_id',
+                'name'      => 'User Role Tab',
+                'metaboxes' => ['lurm-user-role-id']
+            ];
+        }
+
+        return $header_tabs_data;
+    }
+
+    /**
+     * update user role
+     */
+    public function lurm_update_user_role( $user_id, $group_id ) {
+
+        global $wp_roles;
+        $roles = $wp_roles->roles;
+
+        $role_names = array_column( $roles, 'name' );
+        $updated_data = get_post_meta( $group_id, 'lurm_custom_settings', true );
+        $upated_role = isset( $updated_data['user_role'] ) ? $updated_data['user_role'] : '';
+        $custom_user_role = str_replace( ' ', '_', $upated_role );
+        $custom_user_role = strtolower( $custom_user_role );
+        $user = get_userdata( $user_id );
+
+        $is_option_enabled = isset( $updated_data['option'] ) ? $updated_data['option'] : '';
+
+        if ( $user && ! empty( $custom_user_role ) && array_key_exists( $custom_user_role, wp_roles()->roles ) && 'true' == $is_option_enabled ) {
+
+            if( in_array( $upated_role , $role_names ) ) {
+                $user->add_role( $custom_user_role );
+            }
+        }
     }
 }
 

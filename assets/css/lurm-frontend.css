@@ -1,0 +1,152 @@
+.switch {
+  position: relative;
+  display: inline-block;
+  width: 50px;
+  height: 28px;
+}
+
+.switch input { 
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #ccc;
+  -webkit-transition: .4s;
+  transition: .4s;
+}
+
+.slider:before {
+  position: absolute;
+  content: "";
+  height: 20px;
+  width: 20px;
+  left: 2px;
+  bottom: 4px;
+  background-color: white;
+  -webkit-transition: .4s;
+  transition: .4s;
+}
+
+input:checked + .slider {
+  background-color: #2196F3;
+}
+
+input:focus + .slider {
+  box-shadow: 0 0 1px #2196F3;
+}
+
+input:checked + .slider:before {
+  -webkit-transform: translateX(26px);
+  -ms-transform: translateX(26px);
+  transform: translateX(26px);
+}
+
+/* Rounded sliders */
+.slider.round {
+  border-radius: 34px;
+}
+
+.slider.round:before {
+  border-radius: 50%;
+}
+
+/** start dropdown css **/
+.lurm-role-dropdown-wrapper {
+  position: relative;
+  z-index: 9;
+  width: 25%;
+}
+
+.lurm-role-dropdown-header {
+  background: #e4e4e447;
+  padding: 10px;
+  border: 2px solid #e4e4e4;
+  border-radius: 12px;
+  height: 30px;
+  overflow: hidden;
+  display: flex;
+  width: 300px;
+}
+.lurm-role-dropdown-header,
+.lurm-role-option {
+  cursor: default;
+}
+.lurm-select-text-wrap {
+  width: 90%;
+  line-height: 2;
+}
+.lurm-role-down-arrow {
+  width: 10%;
+  font-size: 14px;
+  float: right;
+  margin-top: 9px;
+  margin-right: -11px;
+  text-align: right;
+ }
+ .lurm-inner-wrap {
+  background: white;
+  border: 1px solid black;
+  overflow: auto;
+  position: absolute;
+  width: 321px;
+  max-height: 150px;
+ }
+ .lurm-role-text-field input,
+ .lurm-role-text-field button, 
+ .lurm-inner-wrap,
+ .lurm-role-dropdown-wrapper {
+  display: none;
+ }  
+ .lurm-role-text-field input {
+  width: 321px;
+ }
+ .lurm-select-role-text {
+  padding-left: 10px;
+  cursor: default;
+}
+.lurm-role-option {
+  color: black;
+  padding-left: 10px;
+}
+.lurm-role-option:hover {
+  background: #446cb9;
+  color: white;
+}
+/** end dropdown css **/
+
+/** start normal css **/
+.lurm-inner-wrapper,
+.lurm-role-text-field {
+  padding: 10px;
+}
+.lurm-role-dropdown-wrapper {
+  padding: 10px 10px 0 10px;
+}
+.lurm-role-text-field button {
+  cursor: pointer;
+  padding: 10px 20px;
+  border-radius: 12px;
+  border: unset;
+  background: #2196F3;
+  color: white;
+}
+.lurm-child-wrapper {
+  display: flex;
+}
+/*.lurm-role-option {
+  width: 85%;
+}*/
+.lurm-trash {
+  width: 15%;
+  color: red;
+  cursor: pointer;
+}
+/** end normal css **/
