@@ -10,6 +10,33 @@
 				this.displayChildFields();
 				this.createUserRole();
 				this.deleteRole();
+				this.updateGroupStatus();
+			},
+
+			/**
+			 * update group status
+			 */
+			updateGroupStatus: function() {
+
+				$( document ).on( 'click', '.mld-lurm-update-group-status button', function(e) {
+
+					e.preventDefault();
+
+					let self = $(this);
+					self.text( 'Update...' );
+					let groupID = self.attr( 'data_group-id' );
+
+					let data = {
+						'action'          : 'update_status',
+						'group_id'		  : groupID
+					};
+
+					jQuery.post( LURM.ajaxURL, data, function( response ) {
+
+						$( '.mld-lurm-update-group-status button' ).text( 'Update' );
+						$( '.mld-lurm-update-group-status button' ).hide();
+					} );
+				} );
 			},
 
 			/**
@@ -54,7 +81,18 @@
 
 					e.preventDefault();
 
-					var confirmed = confirm( "Do you really want to create this user role?" );
+					let selectedVal = $( '.lurm-select-text-wrap' ).text();
+
+					selectedVal = selectedVal.trim();
+					selectedVal = selectedVal.replace(/\s+/g, ' ' );
+
+					let confirmationText = "Do you really want to update?";
+					
+					if( 'Any Other' == selectedVal ) {
+						confirmationText = "Do you really want to create this user role?";
+					}
+
+					var confirmed = confirm( confirmationText );
 
 					if( confirmed ) {
 
@@ -104,7 +142,7 @@
 								let newRole = $( '.lurm-role-text-field input' ).val();
 								let newRollKey = newRole.replace(/\s+/g, '_').toLowerCase();
 								$( '.lurm-select-text-wrap' ).text( newRole );
-								let html = '<div class="lurm-role-option" data-role_key="'+newRollKey+'">'+newRole+'</div>';
+								let html = '<div class="lurm-child-wrapper"><div class="lurm-role-option" style="width: 85%;" data-role_key="'+newRollKey+'">'+newRole+'</div><div class="lurm-trash dashicons dashicons-trash"></div></div>';
 								$( '.lurm-select-role-text' ).after( html );
 							}
 
@@ -125,9 +163,11 @@
 					var isChecked = $( '.lurm-checkbox' ).prop( 'checked' );
 
 					if (isChecked) {
+						$( '.mld-lurm-update-group-status' ).hide();
 						$( '.lurm-role-dropdown-wrapper' ).show();
 						$( '.lurm-role-text-field button' ).text( 'Update' );
 					} else {
+						$( '.mld-lurm-update-group-status' ).show();
 						$( '.lurm-role-dropdown-wrapper' ).hide();
 						$( '.lurm-role-text-field button' ).hide();
 					}

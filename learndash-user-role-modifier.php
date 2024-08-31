@@ -86,6 +86,29 @@ class LearnDash_User_Role_Modifier {
         add_action( 'admin_enqueue_scripts', [ $this, 'lurm_enqueue_scripts' ] );
         add_action( 'wp_ajax_create_user_role', [ $this, 'lurm_create_user_role' ] );
         add_action( 'wp_ajax_delete_user_role', [ $this, 'lurm_delete_user_role' ] );
+        add_action( 'wp_ajax_update_status', [ $this, 'lurm_update_status' ] );
+    }
+
+    /**
+     * update group status
+     */
+    public function lurm_update_status() {
+
+        $group_id = isset( $_POST['group_id'] ) ? $_POST['group_id'] : 0;
+
+        if( ! $group_id ) {
+            wp_die();
+        }
+
+        $get_updated_data = get_post_meta( $group_id, 'lurm_custom_settings', true );
+
+        if( $get_updated_data ) {
+
+            $get_updated_data['option'] = 'false';
+            update_post_meta( $group_id, 'lurm_custom_settings', $get_updated_data );
+        }
+
+        wp_die();
     }
 
     /**
@@ -139,18 +162,10 @@ class LearnDash_User_Role_Modifier {
                     'vc_access_rules_settings' => true,
                     'vc_access_rules_templates' => true,
                     'vc_access_rules_shortcodes' => true,
-                    'read' => true,
-                    'propanel_widgets' => false,
+                    'read'                          => true,
+                    'propanel_widgets'      => false,
+                    'lurm_user_role'        => true
                 ) );
-
-                $custom_role = get_option( 'lurm-role-name' );
-                
-                if( ! $custom_role ) {
-                    $custom_role = [];    
-                }
-
-                $custom_role[$custom_user_role] = $role_name;
-                update_option( 'lurm-role-name', $custom_role );
                 
             } else {
                 $role_name = $selected_option;
@@ -210,7 +225,7 @@ class LearnDash_User_Role_Modifier {
 
         $option_is_enabled = isset( $get_updated_data['option'] ) ? $get_updated_data['option'] : '';
 
-        $custom_role = get_option( 'lurm-role-name' );
+        // $custom_role = get_option( 'lurm-role-name' );
 
         $selected_role = __( 'Select a role', LURM_TEXT_DOMAIN );
         $lurm_checked = '';
@@ -257,20 +272,27 @@ class LearnDash_User_Role_Modifier {
 
                                 $role_key = str_replace( ' ', '_', $role_name );
                                 $role_key = strtolower( $role_key );
+                                $get_role = get_role( $role_key );
+ 
+                                if( $get_role ) {
 
-                                if( is_array( $custom_role ) && in_array( $role_name, $custom_role ) ) {
-                                    ?>
-                                    <div class="lurm-child-wrapper">
-                                        <div class="lurm-role-option" style="width: 85%;" data-role_key="<?php echo $role_key; ?>"><?php echo $role_name ; ?></div>
-                                        <div class="lurm-trash dashicons dashicons-trash"></div>
-                                    </div>                                
-                                    <?php
-                                } else {
-                                    ?>
-                                    <div class="lurm-child-wrapper">
-                                        <div class="lurm-role-option" style="width: 100%;" data-role_key="<?php echo $role_key; ?>"><?php echo $role_name ; ?></div>
-                                    </div>
-                                    <?php
+                                    $has_key = isset( $get_role->capabilities['lurm_user_role'] ) ? $get_role->capabilities['lurm_user_role'] : '';
+
+                                    if( $has_key ) {
+                                        ?>
+                                        <div class="lurm-child-wrapper">
+                                            <div class="lurm-role-option" style="width: 85%;" data-role_key="<?php echo $role_key; ?>"><?php echo $role_name ; ?></div>
+                                            <div class="lurm-trash dashicons dashicons-trash"></div>
+                                        </div>
+                                        <?php
+                                    } else {
+
+                                        ?>
+                                        <div class="lurm-child-wrapper">
+                                            <div class="lurm-role-option" style="width: 100%;" data-role_key="<?php echo $role_key; ?>"><?php echo $role_name ; ?></div>
+                                        </div>
+                                        <?php
+                                    }
                                 }           
                             }
                         }
@@ -281,6 +303,9 @@ class LearnDash_User_Role_Modifier {
             <div class="lurm-role-text-field">
                 <p><input type="text" placeholder="<?php echo __( 'Enter role name', LURM_TEXT_DOMAIN ); ?>"></p>
                 <button data_group-id="<?php echo $group_id; ?>"><?php echo __( 'Create Role', LURM_TEXT_DOMAIN ); ?></button>
+            </div>
+            <div class="mld-lurm-update-group-status">
+                <button data_group-id="<?php echo $group_id; ?>"><?php echo __( 'Update', LURM_TEXT_DOMAIN ); ?></button> 
             </div>
         </div>
         <?php

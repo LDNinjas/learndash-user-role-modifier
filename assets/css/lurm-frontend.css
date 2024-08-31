@@ -102,7 +102,8 @@ input:checked + .slider:before {
  .lurm-role-text-field input,
  .lurm-role-text-field button, 
  .lurm-inner-wrap,
- .lurm-role-dropdown-wrapper {
+ .lurm-role-dropdown-wrapper,
+ .mld-lurm-update-group-status {
   display: none;
  }  
  .lurm-role-text-field input {
@@ -130,7 +131,8 @@ input:checked + .slider:before {
 .lurm-role-dropdown-wrapper {
   padding: 10px 10px 0 10px;
 }
-.lurm-role-text-field button {
+.lurm-role-text-field button,
+.mld-lurm-update-group-status button {
   cursor: pointer;
   padding: 10px 20px;
   border-radius: 12px;
