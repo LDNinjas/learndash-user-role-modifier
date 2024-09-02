@@ -87,6 +87,38 @@ class LearnDash_User_Role_Modifier {
         add_action( 'wp_ajax_create_user_role', [ $this, 'lurm_create_user_role' ] );
         add_action( 'wp_ajax_delete_user_role', [ $this, 'lurm_delete_user_role' ] );
         add_action( 'wp_ajax_update_status', [ $this, 'lurm_update_status' ] );
+        add_action( 'ld_removed_group_access', [ $this, 'lurm_remove_user_role' ], 10, 2 );
+    }
+
+    /**
+     * Remove user role
+     */
+    public function lurm_remove_user_role( $user_id, $group_id ) {
+
+        global $wpdb;
+
+        $meta_key = $wpdb->base_prefix.'capabilities';
+
+        $get_group_selected_role = get_post_meta( $group_id, 'lurm_custom_settings', true );   
+
+        if( $get_group_selected_role ) {
+
+            $user_role_name = isset( $get_group_selected_role['user_role'] ) ? $get_group_selected_role['user_role'] : '';
+            
+            if( $user_role_name ) {
+
+                $custom_user_role = str_replace( ' ', '_', $user_role_name );
+                $keyToRemove = strtolower( $custom_user_role );
+
+                $get_capabilities = get_user_meta( $user_id, $meta_key, true );
+                
+                if ( array_key_exists( $keyToRemove, $get_capabilities ) ) {
+
+                    $user = get_user_by( 'id', $user_id );
+                    $user->remove_role( $keyToRemove );
+                }
+            }
+        }
     }
 
     /**
