@@ -132,13 +132,17 @@ input:checked + .slider:before {
   padding: 10px 10px 0 10px;
 }
 .lurm-role-text-field button,
-.mld-lurm-update-group-status button {
+.mld-lurm-update-group-status button,
+.lurm-enrolled-course-btn button {
   cursor: pointer;
   padding: 10px 20px;
   border-radius: 12px;
   border: unset;
   background: #2196F3;
   color: white;
+}
+.lurm-enrolled-course-btn button {
+  margin: 10px;
 }
 .lurm-child-wrapper {
   display: flex;
@@ -150,5 +154,15 @@ input:checked + .slider:before {
   width: 15%;
   color: red;
   cursor: pointer;
+}
+.lurm-group-bundle-content,
+.lurm-enrolled-course-btn {
+  display: none;
+}
+.lurm-group-bundle-wrapper {
+  margin-left: 10px;
+}
+.lurm-custom-checkbox {
+  margin-bottom: 10px;
 }
 /** end normal css **/

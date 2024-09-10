@@ -88,6 +88,241 @@ class LearnDash_User_Role_Modifier {
         add_action( 'wp_ajax_delete_user_role', [ $this, 'lurm_delete_user_role' ] );
         add_action( 'wp_ajax_update_status', [ $this, 'lurm_update_status' ] );
         add_action( 'ld_removed_group_access', [ $this, 'lurm_remove_user_role' ], 10, 2 );
+        add_action( 'wp_ajax_assign_course_to_group', [ $this, 'lurm_assign_course_to_group' ] );
+        add_action( 'save_post', [ $this, 'lurm_update_group_courses_on_course_tag_update' ], 9999, 1 );
+        add_action( 'deleted_term_relationships', [ $this, 'lurm_deleted_term_relationships' ], 10, 3 );
+    }
+
+    /**
+     * create a function to remove course from group 
+     */
+    public static function lurm_remove_course_from_group( $object_id, $tags ) {
+
+        global $wpdb;
+
+        $custom_key = 'lurm_tags'; 
+        $course_id = (int)$object_id;
+        
+        if( is_array( $tags ) && ! empty( $tags ) ) {
+
+            foreach( $tags as $tag ) {
+
+                $tag_id = intval( $tag );
+ 
+                if( $tag_id ) {
+
+                    $query = $wpdb->prepare("
+                        SELECT post_id
+                        FROM {$wpdb->postmeta}
+                        WHERE meta_key = %s
+                        AND meta_value LIKE %s
+                        ", $custom_key, '%' . $wpdb->esc_like($tag_id) . '%');
+
+                    $group_ids = $wpdb->get_col($query);
+                    
+                    if( is_array( $group_ids ) && ! empty( $group_ids ) ) {
+                        foreach( $group_ids as $group_id ) {
+                            
+                            $group_id = intval( $group_id );
+
+                            $updated_tags = get_post_meta( $group_id, 'lurm_tags', true );
+                            $tag_is_checked = get_post_meta( $group_id, 'lurm_tags_option', true );
+                            
+                            if( in_array( $tag_id, $updated_tags ) ) {
+                                if( 'true' == $tag_is_checked ) {
+                                    ld_update_course_group_access( $course_id, $group_id, true );
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * remove course from group
+     */
+    public function lurm_deleted_term_relationships( $object_id, $tt_ids, $taxonomy ) {
+
+        if( 'ld_course_tag' == $taxonomy && is_array( $tt_ids ) && ! empty( $tt_ids ) ) {
+            update_post_meta( $object_id, 'lurm_old_tags', $tt_ids );
+        }
+    }
+
+    /**
+     * update group courses
+     */
+    public function lurm_update_group_courses_on_course_tag_update( $post_id ) {
+
+        self::lurm_update_course_on_group( $post_id );
+
+        $course_id = $post_id;
+        
+        $get_post_type = get_post_type( $course_id );
+
+        if( $get_post_type && 'sfwd-courses' == $get_post_type ) {
+
+            $get_deleted_tags = get_post_meta( $course_id, 'lurm_old_tags', true );
+
+            if( $get_deleted_tags ) {
+                self::lurm_remove_course_from_group( $course_id, $get_deleted_tags );
+                delete_post_meta( $course_id, 'lurm_old_tags' );
+            }
+        }   
+    }
+
+    /**
+     * create a function to get group id according to tag
+     */
+    public static function lurm_update_course_on_group( $post_id ) {
+
+        global $wpdb;
+        
+        $post_type = get_post_type();
+
+        $custom_key = 'lurm_tags';
+
+        // if( 'groups' == $post_type ) {
+
+            // $tags = wp_get_post_terms( $post_id, 'ld_group_tag' );
+            // $tags_name = array_column( $tags, 'name' );
+            
+            // $tags_args = array(
+            //     'post_type' => 'sfwd-courses',
+            //     'posts_per_page' => -1,
+            //     'tax_query' => array(
+            //         array(
+            //             'taxonomy' => 'ld_course_tag',
+            //             'field' => 'name', 
+            //             'terms' => $tags_name
+            //         )
+            //     )
+            // );
+
+            // $tags_courses = get_posts( $tags_args );
+            // $tags_courses = array_column( $tags_courses , 'ID' );
+            
+            // if( $tags_courses ) {
+
+            //     $updated_tags = get_post_meta( $group_id, 'lurm_tags', true );
+            // }
+        // }
+
+        if( 'sfwd-courses' == $post_type ) {
+
+            $tags = wp_get_post_terms( $post_id, 'ld_course_tag' );
+
+            if( is_array( $tags ) && ! empty( $tags ) ) {
+
+                foreach( $tags as $tag ) {
+
+                    $tag_id = isset( $tag->term_id ) ? intval( $tag->term_id ) : '';
+                    if( $tag_id ) {
+
+                        $query = $wpdb->prepare("
+                            SELECT post_id
+                            FROM {$wpdb->postmeta}
+                            WHERE meta_key = %s
+                            AND meta_value LIKE %s
+                            ", $custom_key, '%' . $wpdb->esc_like($tag_id) . '%');
+
+                        $group_ids = $wpdb->get_col($query);
+
+                        if( is_array( $group_ids ) && ! empty( $group_ids ) ) {
+                            foreach( $group_ids as $group_id ) {
+
+                                $group_id = intval( $group_id );
+                                $updated_tags = get_post_meta( $group_id, 'lurm_tags', true );
+
+                                if( in_array( $tag_id, $updated_tags ) ) {
+
+                                    $tag_is_checked = get_post_meta( $group_id, 'lurm_tags_option', true );
+
+                                    if( 'true' == $tag_is_checked ) {
+                                        ld_update_course_group_access( $post_id, $group_id );
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * assign courses into group
+     */
+    public function lurm_assign_course_to_group() {
+
+        $tags = isset( $_POST['tags'] ) ? json_decode( str_replace( '\\', '', $_POST['tags'] ) ) : [];
+        $group_id = isset( $_POST['group_id'] ) ? intval( $_POST['group_id'] ) : 0;
+
+        $group_updated_tags = get_post_meta( $group_id, 'lurm_tags', true );
+
+        if( $group_updated_tags && is_array( $group_updated_tags ) ) {
+
+            $remove_tags = array_diff( $group_updated_tags, $tags );
+            $args = array(
+                'post_type' => 'sfwd-courses',
+                'posts_per_page' => -1,
+                'tax_query' => array(
+                    array(
+                        'taxonomy' => 'ld_course_tag',
+                        'field' => 'ids',
+                        'terms' => $remove_tags
+                    )
+                )
+            );
+
+            $courses = get_posts( $args );
+            if( is_array( $courses ) && ! empty( $courses ) ) {
+
+                $course_ids = array_column( $courses , 'ID' );
+
+                if( is_array( $course_ids ) && ! empty( $course_ids ) ) {
+                    foreach( $course_ids as $course_id ) {
+                        ld_update_course_group_access( $course_id, $group_id, true );
+                    }
+                }
+            }
+        }
+
+        if( $group_id ) {
+
+            update_post_meta( $group_id, 'lurm_tags_option', 'true' );
+            update_post_meta( $group_id, 'lurm_tags', $tags );
+
+            if( is_array( $tags ) && ! empty( $tags ) ) {
+                
+                $args = array(
+                    'post_type' => 'sfwd-courses',
+                    'posts_per_page' => -1,
+                    'tax_query' => array(
+                        array(
+                            'taxonomy' => 'ld_course_tag',
+                            'field' => 'ids',
+                            'terms' => $tags
+                        )
+                    )
+                );
+
+                $courses = get_posts( $args );
+                if( is_array( $courses ) && ! empty( $courses ) ) {
+
+                    $course_ids = array_column( $courses , 'ID' );
+                    
+                    if( is_array( $course_ids ) && ! empty( $course_ids ) ) {
+                        foreach( $course_ids as $course_id ) {
+
+                            ld_update_course_group_access( $course_id, $group_id );
+                        }
+                    }
+                }
+            }
+        }
+        wp_die();
     }
 
     /**
@@ -127,16 +362,23 @@ class LearnDash_User_Role_Modifier {
     public function lurm_update_status() {
 
         $group_id = isset( $_POST['group_id'] ) ? $_POST['group_id'] : 0;
-
+        $role_checked = isset( $_POST['role_check'] ) ? $_POST['role_check'] : '';
+        $tag_checked = isset( $_POST['tag_check'] ) ? $_POST['tag_check'] : '';
+        
         if( ! $group_id ) {
             wp_die();
         }
 
         $get_updated_data = get_post_meta( $group_id, 'lurm_custom_settings', true );
+        $tag_is_checked = get_post_meta( $group_id, 'lurm_tags_option', true );
+
+        if( $tag_is_checked ) {
+            update_post_meta( $group_id, 'lurm_tags_option', $tag_checked );
+        }
 
         if( $get_updated_data ) {
 
-            $get_updated_data['option'] = 'false';
+            $get_updated_data['option'] = $role_checked;
             update_post_meta( $group_id, 'lurm_custom_settings', $get_updated_data );
         }
 
@@ -203,12 +445,51 @@ class LearnDash_User_Role_Modifier {
                 $role_name = $selected_option;
             }
 
-            $data = [];
-            $data['option'] = $is_checked;
-            $data['user_role'] = $role_name;
-            update_post_meta( $group_id, 'lurm_custom_settings', $data );
-        }
+            $get_setting_data = get_post_meta( $group_id, 'lurm_custom_settings', true );
+            
+            if( isset( $get_setting_data['user_role'] ) && $role_name ) {
 
+                $role_to_remove = isset( $get_setting_data['user_role'] ) ? $get_setting_data['user_role'] : '';
+                $group_users = learndash_get_groups_users( $group_id );
+                $group_users = array_column( $group_users, 'ID' );
+
+                $role_to_remove = str_replace( ' ', '_', $role_to_remove );
+                $role_to_remove = strtolower( $role_to_remove );
+
+                $awarded_role_name = str_replace( ' ', '_', $role_name );
+                $awarded_role_name = strtolower( $awarded_role_name );
+
+                if( is_array( $group_users ) && ! empty( $group_users ) ) {
+
+                    foreach( $group_users as $group_user_id ) {
+                        
+                        $user = get_user_by( 'id', $group_user_id ); 
+
+                        if ( $user ) {
+
+                            if ( in_array( $role_to_remove, $user->roles ) ) {
+
+                                $user->remove_role( $role_to_remove );
+                                $user->add_role( $awarded_role_name );
+                            }
+                        }                       
+                    }
+                }
+            }
+
+            if( $get_setting_data ) {
+
+                $get_setting_data['option'] = $is_checked;
+                $get_setting_data['user_role'] = $role_name;
+                update_post_meta( $group_id, 'lurm_custom_settings', $get_setting_data );
+            } else {
+
+                $data = [];
+                $data['option'] = $is_checked;
+                $data['user_role'] = $role_name;
+                update_post_meta( $group_id, 'lurm_custom_settings', $data );
+            }
+        }
         wp_die();
     }
 
@@ -221,6 +502,8 @@ class LearnDash_User_Role_Modifier {
 
         wp_enqueue_style( 'lurm-frontend-css', LURM_ASSETS_URL . 'css/lurm-frontend.css', [], $rand, null );
         wp_enqueue_script( 'lurm-backend-js', LURM_ASSETS_URL . 'js/lurm-backend.js', [ 'jquery' ], $rand, true );
+        wp_enqueue_style( 'lurm-select2-css', LURM_ASSETS_URL . 'css/select2.min.css', [], $rand, null );
+        wp_enqueue_script( 'lurm-select2-js', LURM_ASSETS_URL . 'js/select2.full.min.js', [ 'jquery' ], $rand, true );
         wp_localize_script( 'lurm-backend-js', 'LURM', [
             'ajaxURL'       => admin_url( 'admin-ajax.php' ),
             'baseURL'       => get_permalink(),
@@ -235,7 +518,7 @@ class LearnDash_User_Role_Modifier {
         add_meta_box(
 
             'lurm-user-role-id',
-            'Custom User Role Content',
+            ' ',
             [ $this, 'lurm_metabox_content' ],
             $post_type,
             'advanced',
@@ -254,11 +537,19 @@ class LearnDash_User_Role_Modifier {
         
         $group_id = get_the_ID();
         $get_updated_data = get_post_meta( $group_id, 'lurm_custom_settings', true );
-
         $option_is_enabled = isset( $get_updated_data['option'] ) ? $get_updated_data['option'] : '';
 
-        // $custom_role = get_option( 'lurm-role-name' );
+        $tag_id_enabled = get_post_meta( $group_id, 'lurm_tags_option', true );
+        // var_dump( $tag_id_enabled );        
+        if( 'true' == $tag_id_enabled ) {
+            $tag_id_enabled = 'checked';
+            $tag_content = 'block';
+        } else {
+            $tag_id_enabled = '';
+            $tag_content = '';
+        }
 
+        $selected_tags = get_post_meta( $group_id, 'lurm_tags', true );
         $selected_role = __( 'Select a role', LURM_TEXT_DOMAIN );
         $lurm_checked = '';
         $display = '';
@@ -336,6 +627,53 @@ class LearnDash_User_Role_Modifier {
                 <p><input type="text" placeholder="<?php echo __( 'Enter role name', LURM_TEXT_DOMAIN ); ?>"></p>
                 <button data_group-id="<?php echo $group_id; ?>"><?php echo __( 'Create Role', LURM_TEXT_DOMAIN ); ?></button>
             </div>
+
+            <!-- -->
+            <div class="lurm-group-bundle-wrapper">
+                <?php 
+                $current_tab = isset( $_GET['currentTab'] ) ? $_GET['currentTab'] : '';
+                ?>
+                <input type="hidden" class="lurm-current-tab" value="<?php echo $current_tab; ?>">
+                <h3><?php echo __( 'Bundle Group', LURM_TEXT_DOMAIN ); ?></h3>
+                <label class="switch lurm-custom-checkbox">
+                  <input type="checkbox" class="lurm-group-bundle-checkbox" <?php echo $tag_id_enabled; ?>>
+                  <span class="slider round"></span>
+                </label>
+                <div class="lurm-group-bundle-content" style="display: <?php echo $tag_content; ?>;">
+                    <?php
+                    $tags = get_terms( array(
+                        'taxonomy' => 'ld_course_tag'
+                    ) );
+
+                    if( is_array( $tags ) && ! empty( $tags ) ) {
+                        ?>
+                        <select class="lurm-course-tags" multiple="multiple">
+                            <?php 
+                            foreach( $tags as $tag ) {
+                                
+                                $selected = '';
+                                if( is_array( $selected_tags ) && ! empty( $selected_tags ) ) {
+
+                                    if( in_array( $tag->term_id, $selected_tags ) ) {
+                                        $selected = 'selected';
+                                    }
+                                }
+                                ?>
+                                <option value="<?php echo $tag->term_id; ?>" <?php echo $selected; ?>><?php echo ucwords( $tag->name ); ?></option>
+                                <?php
+                            }
+                            ?>
+                        </select>
+                        <?php
+                    }
+
+                    ?>
+                </div>
+                <div class="lurm-enrolled-course-btn">
+                    <button data-group_id="<?php echo $group_id; ?>"><?php echo __( 'Update', LURM_TEXT_DOMAIN ); ?></button>
+                </div>
+            </div>
+            <!-- -->
             <div class="mld-lurm-update-group-status">
                 <button data_group-id="<?php echo $group_id; ?>"><?php echo __( 'Update', LURM_TEXT_DOMAIN ); ?></button> 
             </div>
@@ -358,7 +696,7 @@ class LearnDash_User_Role_Modifier {
 
             $header_tabs_data[] = [
                 'id'        => 'lurm_tab_id',
-                'name'      => 'User Role Tab',
+                'name'      => 'Bundle settings',
                 'metaboxes' => ['lurm-user-role-id']
             ];
         }

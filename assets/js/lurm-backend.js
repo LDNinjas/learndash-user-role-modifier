@@ -11,6 +11,99 @@
 				this.createUserRole();
 				this.deleteRole();
 				this.updateGroupStatus();
+				this.applySelect2();
+				this.displayGroupBundleChildFields();
+				this.enrolledIntoGroups();
+				this.tagsOnChange();
+			},
+
+			/**
+			 * tag dropdown on change
+			 */
+			tagsOnChange: function() {
+
+				$( document ).on( 'change', '.lurm-course-tags', function() {
+					
+					$( '.lurm-enrolled-course-btn' ).show();
+					$( '.lurm-enrolled-course-btn button' ).show();
+					$( '.lurm-enrolled-course-btn button' ).text( 'Update' );
+					
+					$( '.select2-search__field' ).removeAttr( 'style' );
+					$( '.select2-search__field' ).css( 'width', '300px' );
+					$( '.select2-selection' ).css( 'width', '300px' );
+				} );
+			},
+
+			/**
+			 * Enrolled into group 
+			 */
+			enrolledIntoGroups: function() {
+
+				$( document ).on( 'click', '.lurm-enrolled-course-btn button', function(e) {
+
+					e.preventDefault();
+					var confirmed = confirm("Are you sure you want to update the tags?");
+					
+					if( confirmed ) {
+
+						let self = $(this);
+						self.text( 'Updating...' );
+						let Tags = $( '.lurm-course-tags' ).val();
+						let groupID = self.attr( 'data-group_id' );
+
+						let data = {
+							'action'          : 'assign_course_to_group',
+							'tags'		      : JSON.stringify( Tags ),
+							'group_id'		  : groupID
+						};
+
+						jQuery.post( LURM.ajaxURL, data, function( response ) {
+							$( '.lurm-enrolled-course-btn button' ).hide();
+						} );
+					}
+				} );
+			},
+
+			/**
+			 * display group bundle child fields
+			 */
+			displayGroupBundleChildFields: function() {
+
+				$( document ).on( 'click', '.lurm-group-bundle-checkbox', function() {
+
+					var isChecked = $( '.lurm-group-bundle-checkbox' ).prop( 'checked' );
+
+					if (isChecked) {
+						$( '.lurm-group-bundle-content' ).show();
+						$( '.mld-lurm-update-group-status' ).hide();
+						$( '.lurm-enrolled-course-btn' ).show();
+					} else {
+						$( '.lurm-enrolled-course-btn' ).hide();
+						$( '.mld-lurm-update-group-status' ).show();
+						$( '.lurm-group-bundle-content' ).hide();
+					}
+				} );
+			},
+
+			/**
+			 * apply select 2
+			 */
+			applySelect2: function() {
+
+				$( '.lurm-course-tags' ).select2( {
+					placeholder: "Select tag(s)",
+					allowClear: true
+				} );
+
+				let currentTab = $( '.lurm-current-tab' ).val();
+				
+				if( 'lurm_tab_id' == currentTab ) {
+					setInterval(function () {
+						$( '.select2-search__field' ).removeAttr( 'style' );
+						$( '.select2-search__field' ).css( 'width', '300px' );
+						$( '.select2-selection' ).css( 'width', '300px' );					
+					}, 5000);
+				}
 			},
 
 			/**
@@ -26,9 +119,31 @@
 					self.text( 'Update...' );
 					let groupID = self.attr( 'data_group-id' );
 
+					let isChecked = $( '.lurm-checkbox' ).prop( 'checked' );
+
+					let checkEnabled = '';
+
+					if (isChecked) {
+						checkEnabled = 'true';
+					} else {
+						checkEnabled = 'false';
+					}
+
+					let tagIsChecked = $( '.lurm-group-bundle-checkbox' ).prop( 'checked' );
+
+					let tagCheckEnabled = '';
+
+					if (tagIsChecked) {
+						tagCheckEnabled = 'true';
+					} else {
+						tagCheckEnabled = 'false';
+					}
+
 					let data = {
 						'action'          : 'update_status',
-						'group_id'		  : groupID
+						'group_id'		  : groupID,
+						'tag_check'		  : tagCheckEnabled,
+						'role_check'	  : checkEnabled
 					};
 
 					jQuery.post( LURM.ajaxURL, data, function( response ) {
