@@ -180,34 +180,7 @@ class LearnDash_User_Role_Modifier {
         global $wpdb;
         
         $post_type = get_post_type();
-
         $custom_key = 'lurm_tags';
-
-        // if( 'groups' == $post_type ) {
-
-            // $tags = wp_get_post_terms( $post_id, 'ld_group_tag' );
-            // $tags_name = array_column( $tags, 'name' );
-            
-            // $tags_args = array(
-            //     'post_type' => 'sfwd-courses',
-            //     'posts_per_page' => -1,
-            //     'tax_query' => array(
-            //         array(
-            //             'taxonomy' => 'ld_course_tag',
-            //             'field' => 'name', 
-            //             'terms' => $tags_name
-            //         )
-            //     )
-            // );
-
-            // $tags_courses = get_posts( $tags_args );
-            // $tags_courses = array_column( $tags_courses , 'ID' );
-            
-            // if( $tags_courses ) {
-
-            //     $updated_tags = get_post_meta( $group_id, 'lurm_tags', true );
-            // }
-        // }
 
         if( 'sfwd-courses' == $post_type ) {
 
@@ -515,15 +488,18 @@ class LearnDash_User_Role_Modifier {
      */
     public function lurm_add_metabox( $post_type, $post ) {
 
-        add_meta_box(
+        if( 'groups' == $post_type ) {
+            
+            add_meta_box(
 
-            'lurm-user-role-id',
-            ' ',
-            [ $this, 'lurm_metabox_content' ],
-            $post_type,
-            'advanced',
-            'high'
-        );
+                'lurm-user-role-id',
+                ' ',
+                [ $this, 'lurm_metabox_content' ],
+                $post_type,
+                'advanced',
+                'high'
+            );
+        }
     }
 
     /**
@@ -540,7 +516,7 @@ class LearnDash_User_Role_Modifier {
         $option_is_enabled = isset( $get_updated_data['option'] ) ? $get_updated_data['option'] : '';
 
         $tag_id_enabled = get_post_meta( $group_id, 'lurm_tags_option', true );
-        // var_dump( $tag_id_enabled );        
+                
         if( 'true' == $tag_id_enabled ) {
             $tag_id_enabled = 'checked';
             $tag_content = 'block';
