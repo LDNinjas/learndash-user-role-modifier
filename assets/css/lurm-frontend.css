@@ -99,8 +99,7 @@ input:checked + .slider:before {
   width: 321px;
   max-height: 150px;
  }
- .lurm-role-text-field input,
- .lurm-role-text-field button, 
+ .lurm-role-text-field input, 
  .lurm-inner-wrap,
  .lurm-role-dropdown-wrapper,
  .mld-lurm-update-group-status {
@@ -155,9 +154,11 @@ input:checked + .slider:before {
   color: red;
   cursor: pointer;
 }
-.lurm-group-bundle-content,
-.lurm-enrolled-course-btn {
+.lurm-group-bundle-content {
   display: none;
+}
+.lurm-enrolled-course-btn button {
+  margin-left: unset;
 }
 .lurm-group-bundle-wrapper {
   margin-left: 10px;

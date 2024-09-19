@@ -10,7 +10,6 @@
 				this.displayChildFields();
 				this.createUserRole();
 				this.deleteRole();
-				this.updateGroupStatus();
 				this.applySelect2();
 				this.displayGroupBundleChildFields();
 				this.enrolledIntoGroups();
@@ -28,9 +27,13 @@
 					$( '.lurm-enrolled-course-btn button' ).show();
 					$( '.lurm-enrolled-course-btn button' ).text( 'Update' );
 					
-					$( '.select2-search__field' ).removeAttr( 'style' );
-					$( '.select2-search__field' ).css( 'width', '300px' );
-					$( '.select2-selection' ).css( 'width', '300px' );
+					setTimeout( function(){
+
+						$( '.lurm-main-wrapper .select2-search__field' ).removeAttr( 'style' );
+						$( '.lurm-main-wrapper .select2-search__field' ).css( 'width', '300px' );
+						$( '.lurm-main-wrapper .select2-selection' ).css( 'width', '300px' );
+						$( '.lurm-main-wrapper .select2-selection__rendered' ).css( 'width', '300px' );
+					}, 2000 );
 				} );
 			},
 
@@ -42,23 +45,38 @@
 				$( document ).on( 'click', '.lurm-enrolled-course-btn button', function(e) {
 
 					e.preventDefault();
+
+					let self = $(this);
+					let groupID = self.attr( 'data-group_id' );
+
+					if( ! groupID ) {
+						alert( 'Please create group first...' );
+					}
+
 					var confirmed = confirm("Are you sure you want to update the tags?");
 					
+					let isChecked = $( '.lurm-group-bundle-checkbox' ).prop( 'checked' );
+
+					if( isChecked ) {
+						isChecked = 'true';
+					} else {
+						isChecked = 'false';
+					}
+
 					if( confirmed ) {
 
-						let self = $(this);
 						self.text( 'Updating...' );
 						let Tags = $( '.lurm-course-tags' ).val();
-						let groupID = self.attr( 'data-group_id' );
 
 						let data = {
 							'action'          : 'assign_course_to_group',
 							'tags'		      : JSON.stringify( Tags ),
-							'group_id'		  : groupID
+							'group_id'		  : groupID,
+							'is_check'		  : isChecked
 						};
 
 						jQuery.post( LURM.ajaxURL, data, function( response ) {
-							$( '.lurm-enrolled-course-btn button' ).hide();
+							$( '.lurm-enrolled-course-btn button' ).text( 'Update' );
 						} );
 					}
 				} );
@@ -78,7 +96,6 @@
 						$( '.mld-lurm-update-group-status' ).hide();
 						$( '.lurm-enrolled-course-btn' ).show();
 					} else {
-						$( '.lurm-enrolled-course-btn' ).hide();
 						$( '.mld-lurm-update-group-status' ).show();
 						$( '.lurm-group-bundle-content' ).hide();
 					}
@@ -95,63 +112,12 @@
 					allowClear: true
 				} );
 
-				let currentTab = $( '.lurm-current-tab' ).val();
-				
-				if( 'lurm_tab_id' == currentTab ) {
-					setInterval(function () {
-						$( '.select2-search__field' ).removeAttr( 'style' );
-						$( '.select2-search__field' ).css( 'width', '300px' );
-						$( '.select2-selection' ).css( 'width', '300px' );					
-					}, 5000);
-				}
-			},
-
-			/**
-			 * update group status
-			 */
-			updateGroupStatus: function() {
-
-				$( document ).on( 'click', '.mld-lurm-update-group-status button', function(e) {
-
-					e.preventDefault();
-
-					let self = $(this);
-					self.text( 'Update...' );
-					let groupID = self.attr( 'data_group-id' );
-
-					let isChecked = $( '.lurm-checkbox' ).prop( 'checked' );
-
-					let checkEnabled = '';
-
-					if (isChecked) {
-						checkEnabled = 'true';
-					} else {
-						checkEnabled = 'false';
-					}
-
-					let tagIsChecked = $( '.lurm-group-bundle-checkbox' ).prop( 'checked' );
-
-					let tagCheckEnabled = '';
-
-					if (tagIsChecked) {
-						tagCheckEnabled = 'true';
-					} else {
-						tagCheckEnabled = 'false';
-					}
-
-					let data = {
-						'action'          : 'update_status',
-						'group_id'		  : groupID,
-						'tag_check'		  : tagCheckEnabled,
-						'role_check'	  : checkEnabled
-					};
-
-					jQuery.post( LURM.ajaxURL, data, function( response ) {
-
-						$( '.mld-lurm-update-group-status button' ).text( 'Update' );
-						$( '.mld-lurm-update-group-status button' ).hide();
-					} );
-				} );
+				setTimeout( function() {
+					$( '.lurm-main-wrapper .select2-search__field' ).removeAttr( 'style' );
+					$( '.lurm-main-wrapper .select2-search__field' ).css( 'width', '300px' );
+					$( '.lurm-main-wrapper .select2-selection' ).css( 'width', '300px' );
+					$( '.lurm-main-wrapper .select2-selection__rendered' ).css( 'width', '300px' );
+				}, 2000 );
 			},
 
 			/**
@@ -195,6 +161,13 @@
 				$( document ).on( 'click', '.lurm-role-text-field button', function(e) {
 
 					e.preventDefault();
+					let self = $(this);
+
+					let groupID = self.attr( 'data_group-id' );
+
+					if( ! groupID ) {
+						alert( 'Please create group first...' );
+					}
 
 					let selectedVal = $( '.lurm-select-text-wrap' ).text();
 
@@ -211,17 +184,24 @@
 
 					if( confirmed ) {
 
-						let self = $(this);
 						self.text( self.text()+'...' );
 
-						let selectedRole = $( '.lurm-select-text-wrap' ).text();
+						let newRole = $( '.lurm-role-text-field input' ).val();
+						
+						if( newRole ) {
 
+							var replacedVal = newRole.replace(/ /g, '_');
+							var finalVal = replacedVal.toLowerCase();
+							$( '.lurm-select-text-wrap' ).attr( 'role_key', finalVal );
+						}
+
+						let selectedRole = $( '.lurm-select-text-wrap' ).text();
 						selectedRole = selectedRole.trim();
 						selectedRole = selectedRole.replace(/\s+/g, ' ' );
-						
-						let groupID = self.attr( 'data_group-id' );
+						let selectedKey = $( '.lurm-select-text-wrap' ).attr( 'role_key' );
 
 						let isChecked = $( '.lurm-checkbox' ).prop( 'checked' );
+						
 						let checkEnabled = '';
 
 						if (isChecked) {
@@ -229,8 +209,6 @@
 						} else {
 							checkEnabled = 'false';
 						}
-						
-						let newRole = $( '.lurm-role-text-field input' ).val();
 
 						if( 'Any Other' == selectedRole && ! newRole ) {
 							$( '.lurm-role-text-field input' ).css( 'border', '2px solid red' );
@@ -238,11 +216,12 @@
 						}
 
 						let data = {
-							'action'          : 'create_user_role',
-							'role_name'		  : newRole,
-							'is_checked'	  : checkEnabled,
-							'selected_option' : selectedRole,
-							'group_id'		  : groupID
+							'action'            : 'create_user_role',
+							'role_name'		    : newRole,
+							'is_checked'	    : checkEnabled,
+							'selected_option'   : selectedRole,
+							'group_id'		    : groupID,
+							'selected_role_key' : selectedKey
 						};
 
 						jQuery.post( LURM.ajaxURL, data, function( response ) {
@@ -257,12 +236,16 @@
 								let newRole = $( '.lurm-role-text-field input' ).val();
 								let newRollKey = newRole.replace(/\s+/g, '_').toLowerCase();
 								$( '.lurm-select-text-wrap' ).text( newRole );
+								var replacedValue = newRole.replace(/ /g, '_');
+            					var finalValue = replacedValue.toLowerCase();
+            					$( '.lurm-select-text-wrap' ).attr( 'role_key', finalValue );
+
 								let html = '<div class="lurm-child-wrapper"><div class="lurm-role-option" style="width: 85%;" data-role_key="'+newRollKey+'">'+newRole+'</div><div class="lurm-trash dashicons dashicons-trash"></div></div>';
 								$( '.lurm-select-role-text' ).after( html );
 							}
 
 							$( '.lurm-role-text-field input' ).hide();
-							$( '.lurm-role-text-field button' ).hide();
+							$( '.lurm-role-text-field button' ).text( 'Update' );
 						} );
 					}
 				} );
@@ -284,7 +267,7 @@
 					} else {
 						$( '.mld-lurm-update-group-status' ).show();
 						$( '.lurm-role-dropdown-wrapper' ).hide();
-						$( '.lurm-role-text-field button' ).hide();
+						// $( '.lurm-role-text-field button' ).hide();
 					}
 				} );
 			},
@@ -340,9 +323,10 @@
 						$( '.lurm-role-text-field input' ).hide();
 					}
 
-					let groupID = self.attr( 'data-role_key' );
-					$( '.lurm-select-text-wrap' ).html( self.text() ); 
-					
+					let role_key = self.attr( 'data-role_key' );
+					$( '.lurm-select-text-wrap' ).html( self.text() );	 
+					$( '.lurm-select-text-wrap' ).attr( 'role_key', role_key );
+
 					let selectedRole = $( '.lurm-select-text-wrap' ).text();
 
 					selectedRole = selectedRole.trim();
