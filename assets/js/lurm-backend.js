@@ -242,6 +242,7 @@
 
 								let html = '<div class="lurm-child-wrapper"><div class="lurm-role-option" style="width: 85%;" data-role_key="'+newRollKey+'">'+newRole+'</div><div class="lurm-trash dashicons dashicons-trash"></div></div>';
 								$( '.lurm-select-role-text' ).after( html );
+								$( '.lurm-role-text-field input' ).val( '' )
 							}
 
 							$( '.lurm-role-text-field input' ).hide();

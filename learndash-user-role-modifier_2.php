@@ -317,6 +317,9 @@ class LearnDash_User_Role_Modifier {
 
                 $get_capabilities = get_user_meta( $user_id, $meta_key, true );
                 $user = get_user_by( 'id', $user_id );
+                if( ctype_digit( $user_role_name ) ) {
+                    $user_role_name = (int)$user_role_name;
+                }
                 $user->remove_role( $user_role_name );
             }
         }
@@ -333,6 +336,9 @@ class LearnDash_User_Role_Modifier {
 
             $custom_user_role = str_replace( ' ', '_', $role_name );
             $custom_user_role = strtolower( $custom_user_role );
+            if( ctype_digit( $custom_user_role ) ) {
+                $custom_user_role = (int)$custom_user_role;
+            }
             remove_role( $custom_user_role );
         }
 
@@ -389,28 +395,32 @@ class LearnDash_User_Role_Modifier {
             }
 
             $get_setting_data = get_post_meta( $group_id, 'lurm_custom_settings', true );
-            
-            if( isset( $get_setting_data['user_role'] ) && $role_name ) {
+
+            if( $role_name ) {
 
                 $role_to_remove = isset( $get_setting_data['role_key'] ) ? $get_setting_data['role_key'] : '';
+
                 $group_users = learndash_get_groups_users( $group_id );
-                $group_users = array_column( $group_users, 'ID' );
+
+                if( is_array( $group_users ) && ! empty( $group_users ) ) {
+                    $group_users = array_column( $group_users, 'ID' );
+                }
 
                 $awarded_role_name = $selected_key;
 
                 if( is_array( $group_users ) && ! empty( $group_users ) ) {
 
                     foreach( $group_users as $group_user_id ) {
-                        
+
                         $user = get_user_by( 'id', $group_user_id ); 
 
                         if ( $user ) {
 
-                            if ( in_array( $role_to_remove, $user->roles ) ) {
-
-                                $user->remove_role( $role_to_remove );
-                                $user->add_role( $awarded_role_name );
+                            if( ctype_digit( $role_to_remove ) ) {
+                                $role_to_remove = (int)$role_to_remove;
                             }
+                            $user->remove_role( $role_to_remove );
+                            $user->add_role( $awarded_role_name );    
                         }                       
                     }
                 }
@@ -427,7 +437,7 @@ class LearnDash_User_Role_Modifier {
                 $data = [];
                 $data['option'] = $is_checked;
                 $data['user_role'] = $role_name;
-                $get_setting_data['role_key'] = $selected_key;
+                $data['role_key'] = $selected_key;
                 update_post_meta( $group_id, 'lurm_custom_settings', $data );
             }
         }
